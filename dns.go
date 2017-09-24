@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -41,8 +42,6 @@ const (
 	DEFAULT_TIMEOUT = 5
 )
 
-var Entry norvos
-
 type norvos struct {
 	ops map[string]essos.Operation
 }
@@ -51,10 +50,27 @@ func (n *norvos) Discover() map[string]essos.Operation {
 	return n.ops
 }
 
+func init() {
+	components.Add("dns",
+		&norvos{
+			ops: map[string]essos.Operation{
+				"create": create("Create"),
+				"read":   read("Read"),
+				"delete": delete("Delete"),
+				"update": update("Update"),
+			},
+		})
+}
+
 type create string
 
 func (create) Description() string {
 	return "This is Create"
+}
+
+type Group struct {
+	Name   string
+	Colors []string
 }
 
 func (create) Do(ctx context.Context, args []string) (context.Context, error) {
@@ -62,7 +78,22 @@ func (create) Do(ctx context.Context, args []string) (context.Context, error) {
 		return ctx, errors.New("context is nil")
 	}
 
-	fmt.Print("Call successful")
+	group := Group{
+		Name:   "Reds",
+		Colors: []string{"A", "B"},
+	}
+
+	message, err := json.Marshal(group)
+	if err != nil {
+		fmt.Println("wtf")
+	}
+
+	result := essos.Response{
+		Code:    200,
+		Message: message,
+	}
+
+	ctx = context.WithValue(ctx, "result", result)
 
 	return ctx, nil
 }
@@ -78,8 +109,6 @@ func (delete) Do(ctx context.Context, args []string) (context.Context, error) {
 		return ctx, errors.New("context is nil")
 	}
 
-	fmt.Print("Call successful")
-
 	return ctx, nil
 }
 
@@ -93,8 +122,6 @@ func (update) Do(ctx context.Context, args []string) (context.Context, error) {
 	if ctx == nil {
 		return ctx, errors.New("context is nil")
 	}
-
-	fmt.Print("Call successful")
 
 	return ctx, nil
 }
@@ -110,24 +137,9 @@ func (read) Do(ctx context.Context, args []string) (context.Context, error) {
 		return ctx, errors.New("context is nil")
 	}
 
-	fmt.Print("Call successful")
-
 	return ctx, nil
 }
 
 func do(args []string, data interface{}) error {
 	return nil
-}
-
-func init() {
-	components.Add("dns", func() essos.Component {
-		return &norvos{
-			ops: map[string]essos.Operation{
-				"create": create("Create"),
-				"read":   read("Read"),
-				"delete": delete("Delete"),
-				"update": update("Update"),
-			},
-		}
-	})
 }
