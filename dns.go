@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ import (
 	"github.com/johanliu/essos"
 	"github.com/johanliu/essos/components"
 	"github.com/johanliu/essos/interfaces"
-	"github.com/johanliu/vidar/constant"
+	"github.com/johanliu/vidar"
 )
 
 const (
@@ -42,11 +43,21 @@ func (n *norvos) Start(params interface{}) error {
 		return errors.New("Params format is mismatched with pre-defined one")
 	}
 
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+
 	cfg := client.Config{
 		Endpoints:               []string{p.Etcd},
-		Transport:               client.DefaultTransport,
+		Transport:               transport,
 		HeaderTimeoutPerRequest: time.Second,
 	}
+
 	cli, err = client.New(cfg)
 	if err != nil {
 		return err
@@ -69,6 +80,9 @@ func init() {
 			},
 		})
 }
+
+// For test only
+func main() {}
 
 func reverse(s []string) {
 	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
@@ -135,12 +149,12 @@ func (create) Do(ctx context.Context, args []string) (context.Context, error) {
 		ce, ok := err.(client.Error)
 		if ok {
 			if ce.Code == client.ErrorCodeNodeExist {
-				return nil, constant.NewHTTPError(http.StatusAlreadyReported, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusAlreadyReported, ce.Message)
 			} else {
-				return nil, constant.NewHTTPError(http.StatusBadGateway, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusBadGateway, ce.Message)
 			}
 		} else if err == context.DeadlineExceeded {
-			return nil, constant.GatewayTimeoutError
+			return nil, vidar.GatewayTimeoutError
 		} else {
 			return nil, err
 		}
@@ -192,12 +206,12 @@ func (delete) Do(ctx context.Context, args []string) (context.Context, error) {
 		ce, ok := err.(client.Error)
 		if ok {
 			if ce.Code == client.ErrorCodeKeyNotFound {
-				return nil, constant.NewHTTPError(http.StatusNoContent, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusNoContent, ce.Message)
 			} else {
-				return nil, constant.NewHTTPError(http.StatusBadGateway, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusBadGateway, ce.Message)
 			}
 		} else if err == context.DeadlineExceeded {
-			return nil, constant.GatewayTimeoutError
+			return nil, vidar.GatewayTimeoutError
 		} else {
 			return nil, err
 		}
@@ -270,12 +284,12 @@ func (update) Do(ctx context.Context, args []string) (context.Context, error) {
 		ce, ok := err.(client.Error)
 		if ok {
 			if ce.Code == client.ErrorCodeKeyNotFound {
-				return nil, constant.NewHTTPError(http.StatusNoContent, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusNoContent, ce.Message)
 			} else {
-				return nil, constant.NewHTTPError(http.StatusBadGateway, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusBadGateway, ce.Message)
 			}
 		} else if err == context.DeadlineExceeded {
-			return nil, constant.GatewayTimeoutError
+			return nil, vidar.GatewayTimeoutError
 		} else {
 			return nil, err
 		}
@@ -330,12 +344,12 @@ func (read) Do(ctx context.Context, args []string) (context.Context, error) {
 		ce, ok := err.(client.Error)
 		if ok {
 			if ce.Code == client.ErrorCodeKeyNotFound {
-				return nil, constant.NewHTTPError(http.StatusNoContent, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusNoContent, ce.Message)
 			} else {
-				return nil, constant.NewHTTPError(http.StatusBadGateway, ce.Message)
+				return nil, vidar.NewHTTPError(http.StatusBadGateway, ce.Message)
 			}
 		} else if err == context.DeadlineExceeded {
-			return nil, constant.GatewayTimeoutError
+			return nil, vidar.GatewayTimeoutError
 		} else {
 			return nil, err
 		}
